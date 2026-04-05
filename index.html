@@ -410,6 +410,13 @@
         var selOffsetEl = document.getElementById("selOffset");
         var prayerTitleEl = document.getElementById("prayerTitle");
         var footerLocationEl = document.getElementById("footerLocation");
+        var clockTimeEl = document.getElementById("clockTime");
+        var clockDateEl = document.getElementById("clockDate");
+        var pomoDisplayEl = document.getElementById("pomoDisplay");
+        var pomoStatusEl = document.getElementById("pomoStatus");
+        var pomoSessionsEl = document.getElementById("pomoSessions");
+        var prayerContentEl = document.getElementById("prayerContent");
+        var prayerMetaEl = document.getElementById("prayerMeta");
 
         // Populate country dropdown
         (function () {
@@ -508,8 +515,7 @@
         /* =============================================
            1. DIGITAL CLOCK
            ============================================= */
-        var clockTimeEl = document.getElementById("clockTime");
-        var clockDateEl = document.getElementById("clockDate");
+        // clockTimeEl and clockDateEl declared at top
 
         var dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
         var monthNames = ["January", "February", "March", "April", "May", "June",
@@ -551,9 +557,7 @@
         var pomoIsWork = true;
         var pomoSessions = 0;
 
-        var pomoDisplayEl = document.getElementById("pomoDisplay");
-        var pomoStatusEl = document.getElementById("pomoStatus");
-        var pomoSessionsEl = document.getElementById("pomoSessions");
+        // pomoDisplayEl, pomoStatusEl, pomoSessionsEl declared at top
 
         function formatTime(totalSeconds) {
             var m = Math.floor(totalSeconds / 60);
@@ -621,8 +625,7 @@
         /* =============================================
            3. PRAYER TIMES (Aladhan API — by City)
            ============================================= */
-        var prayerContentEl = document.getElementById("prayerContent");
-        var prayerMetaEl = document.getElementById("prayerMeta");
+        // prayerContentEl and prayerMetaEl declared at top
 
         var prayerKeys = [
             { key: "Fajr", label: "Fajr" },
