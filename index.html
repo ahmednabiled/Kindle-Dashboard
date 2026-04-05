@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kindle Dashboard</title>
+    <style>
+        /* ===== RESET & BASE ===== */
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            background: #fff;
+            color: #000;
+            font-family: Georgia, "Times New Roman", serif;
+            font-size: 18px;
+            line-height: 1.4;
+            -webkit-text-size-adjust: 100%;
+        }
+
+        /* ===== LAYOUT ===== */
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 16px 12px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* ===== SETUP SCREEN ===== */
+        .setup-screen {
+            padding: 20px 0;
+        }
+
+        .setup-title {
+            font-size: 28px;
+            font-weight: bold;
+            text-align: center;
+            padding-bottom: 6px;
+            letter-spacing: 2px;
+        }
+
+        .setup-subtitle {
+            font-size: 16px;
+            text-align: center;
+            color: #333;
+            margin-bottom: 24px;
+        }
+
+        .setup-field {
+            margin-bottom: 18px;
+        }
+
+        .setup-label {
+            display: block;
+            font-size: 18px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .setup-select {
+            display: block;
+            width: 100%;
+            padding: 14px 10px;
+            font-size: 20px;
+            font-family: Georgia, "Times New Roman", serif;
+            border: 3px solid #000;
+            background: #fff;
+            color: #000;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .setup-btn {
+            display: block;
+            width: 100%;
+            padding: 16px;
+            font-size: 22px;
+            font-weight: bold;
+            font-family: Georgia, "Times New Roman", serif;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            border: 3px solid #000;
+            background: #000;
+            color: #fff;
+            cursor: pointer;
+            margin-top: 24px;
+        }
+
+        .setup-btn:active {
+            background: #fff;
+            color: #000;
+        }
+
+        /* ===== SECTION CARD ===== */
+        .card {
+            border: 3px solid #000;
+            margin-bottom: 18px;
+            padding: 16px;
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            border-bottom: 2px solid #000;
+            padding-bottom: 6px;
+            margin-bottom: 12px;
+            text-align: center;
+        }
+
+        /* ===== CLOCK ===== */
+        .clock-time {
+            font-size: 56px;
+            font-weight: bold;
+            text-align: center;
+            letter-spacing: 4px;
+            padding: 10px 0 4px;
+            font-family: "Courier New", Courier, monospace;
+        }
+
+        .clock-date {
+            font-size: 20px;
+            text-align: center;
+            padding-bottom: 6px;
+        }
+
+        /* ===== POMODORO ===== */
+        .pomo-display {
+            font-size: 52px;
+            font-weight: bold;
+            text-align: center;
+            font-family: "Courier New", Courier, monospace;
+            letter-spacing: 3px;
+            padding: 8px 0;
+        }
+
+        .pomo-status {
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .pomo-controls {
+            text-align: center;
+            margin-top: 8px;
+        }
+
+        .btn {
+            display: inline-block;
+            border: 3px solid #000;
+            background: #fff;
+            color: #000;
+            font-size: 18px;
+            font-weight: bold;
+            font-family: Georgia, "Times New Roman", serif;
+            padding: 10px 22px;
+            margin: 0 6px 6px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            min-width: 100px;
+        }
+
+        .btn:active,
+        .btn.active {
+            background: #000;
+            color: #fff;
+        }
+
+        .pomo-sessions {
+            text-align: center;
+            font-size: 16px;
+            margin-top: 8px;
+        }
+
+        /* ===== PRAYER TIMES ===== */
+        .prayer-list {
+            list-style: none;
+        }
+
+        .prayer-item {
+            display: block;
+            border-bottom: 1px solid #000;
+            padding: 10px 4px;
+            font-size: 20px;
+            overflow: hidden;
+        }
+
+        .prayer-item:last-child {
+            border-bottom: none;
+        }
+
+        .prayer-name {
+            float: left;
+            font-weight: bold;
+        }
+
+        .prayer-time {
+            float: right;
+            font-family: "Courier New", Courier, monospace;
+            font-weight: bold;
+        }
+
+        .prayer-item.next-prayer {
+            background: #000;
+            color: #fff;
+            padding: 10px 8px;
+        }
+
+        .prayer-meta {
+            text-align: center;
+            font-size: 14px;
+            margin-top: 8px;
+            color: #333;
+        }
+
+        .prayer-error {
+            text-align: center;
+            font-size: 16px;
+            padding: 12px 0;
+        }
+
+        /* ===== CLEARFIX ===== */
+        .clearfix::after {
+            content: "";
+            display: table;
+            clear: both;
+        }
+
+        /* ===== FOOTER ===== */
+        .footer {
+            text-align: center;
+            font-size: 13px;
+            color: #555;
+            padding: 8px 0 16px;
+        }
+
+        .footer a {
+            color: #000;
+            text-decoration: underline;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+
+        <!-- ===== SETUP SCREEN ===== -->
+        <div id="setupScreen" class="setup-screen hidden">
+            <div class="card">
+                <div class="setup-title">&#9770; Prayer Location</div>
+                <div class="setup-subtitle">Select your country and city to get accurate prayer times.</div>
+
+                <div class="setup-field">
+                    <label class="setup-label" for="selCountry">Country</label>
+                    <select class="setup-select" id="selCountry">
+                        <option value="">-- Choose Country --</option>
+                    </select>
+                </div>
+
+                <div class="setup-field">
+                    <label class="setup-label" for="selCity">City</label>
+                    <select class="setup-select" id="selCity" disabled>
+                        <option value="">-- Choose City --</option>
+                    </select>
+                </div>
+
+                <button class="setup-btn" id="btnContinue" onclick="onSetupContinue()">Continue</button>
+            </div>
+        </div>
+
+        <!-- ===== MAIN DASHBOARD ===== -->
+        <div id="mainDashboard" class="hidden">
+
+            <!-- CLOCK -->
+            <div class="card">
+                <div class="card-title">Clock</div>
+                <div class="clock-time" id="clockTime">--:--:--</div>
+                <div class="clock-date" id="clockDate">---</div>
+            </div>
+
+            <!-- POMODORO -->
+            <div class="card">
+                <div class="card-title">Pomodoro Timer</div>
+                <div class="pomo-status" id="pomoStatus">WORK</div>
+                <div class="pomo-display" id="pomoDisplay">25:00</div>
+                <div class="pomo-controls">
+                    <button class="btn" id="btnStart" onclick="pomoStart()">Start</button>
+                    <button class="btn" id="btnPause" onclick="pomoPause()">Pause</button>
+                    <button class="btn" id="btnReset" onclick="pomoReset()">Reset</button>
+                </div>
+                <div class="pomo-sessions" id="pomoSessions">Sessions completed: 0</div>
+            </div>
+
+            <!-- PRAYER TIMES -->
+            <div class="card">
+                <div class="card-title" id="prayerTitle">Prayer Times</div>
+                <div id="prayerContent">
+                    <p class="prayer-error">Loading prayer times...</p>
+                </div>
+                <div class="prayer-meta" id="prayerMeta"></div>
+            </div>
+
+            <div class="footer" id="footerText">
+                Kindle Dashboard &bull;
+                <span id="footerLocation">---</span>
+                &bull; <a href="javascript:void(0)" onclick="showSetup()">Change Location</a>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        /* =============================================
+           0. LOCATION DATA & SETUP
+           ============================================= */
+        var LOCATIONS = {
+            "Egypt": ["Cairo", "Alexandria", "Mansoura", "Giza", "Tanta", "Aswan", "Luxor", "Port Said", "Suez", "Ismailia", "Zagazig", "Damietta"],
+            "Saudi Arabia": ["Makkah", "Madinah", "Riyadh", "Jeddah", "Dammam", "Tabuk", "Abha", "Taif"],
+            "United Arab Emirates": ["Dubai", "Abu Dhabi", "Sharjah", "Ajman", "Ras Al Khaimah", "Fujairah"],
+            "Turkey": ["Istanbul", "Ankara", "Izmir", "Bursa", "Antalya", "Konya", "Kayseri"],
+            "Pakistan": ["Karachi", "Lahore", "Islamabad", "Rawalpindi", "Faisalabad", "Peshawar", "Quetta", "Multan"],
+            "India": ["New Delhi", "Mumbai", "Bangalore", "Hyderabad", "Chennai", "Kolkata", "Ahmedabad", "Lucknow"],
+            "Bangladesh": ["Dhaka", "Chittagong", "Khulna", "Rajshahi", "Sylhet"],
+            "Indonesia": ["Jakarta", "Surabaya", "Bandung", "Medan", "Semarang", "Yogyakarta"],
+            "Malaysia": ["Kuala Lumpur", "George Town", "Johor Bahru", "Kota Kinabalu"],
+            "Iraq": ["Baghdad", "Basra", "Erbil", "Mosul", "Najaf", "Karbala"],
+            "Jordan": ["Amman", "Irbid", "Zarqa", "Aqaba"],
+            "Lebanon": ["Beirut", "Tripoli", "Sidon"],
+            "Syria": ["Damascus", "Aleppo", "Homs"],
+            "Palestine": ["Gaza", "Jerusalem", "Hebron", "Nablus", "Ramallah"],
+            "Kuwait": ["Kuwait City"],
+            "Qatar": ["Doha"],
+            "Bahrain": ["Manama"],
+            "Oman": ["Muscat", "Salalah", "Sohar"],
+            "Yemen": ["Sanaa", "Aden", "Taiz"],
+            "Libya": ["Tripoli", "Benghazi", "Misrata"],
+            "Tunisia": ["Tunis", "Sfax", "Sousse"],
+            "Algeria": ["Algiers", "Oran", "Constantine"],
+            "Morocco": ["Casablanca", "Rabat", "Marrakech", "Fez", "Tangier"],
+            "Sudan": ["Khartoum", "Omdurman", "Port Sudan"],
+            "Somalia": ["Mogadishu", "Hargeisa"],
+            "Nigeria": ["Lagos", "Abuja", "Kano"],
+            "United Kingdom": ["London", "Birmingham", "Manchester", "Leeds", "Edinburgh", "Glasgow"],
+            "Germany": ["Berlin", "Munich", "Frankfurt", "Hamburg", "Cologne"],
+            "France": ["Paris", "Marseille", "Lyon", "Strasbourg"],
+            "Netherlands": ["Amsterdam", "Rotterdam", "The Hague"],
+            "United States": ["New York", "Los Angeles", "Chicago", "Houston", "Dallas", "Detroit", "San Francisco", "Washington"],
+            "Canada": ["Toronto", "Montreal", "Vancouver", "Ottawa", "Edmonton", "Calgary"]
+        };
+
+        var savedCity = "";
+        var savedCountry = "";
+
+        var setupScreenEl = document.getElementById("setupScreen");
+        var mainDashboardEl = document.getElementById("mainDashboard");
+        var selCountryEl = document.getElementById("selCountry");
+        var selCityEl = document.getElementById("selCity");
+        var prayerTitleEl = document.getElementById("prayerTitle");
+        var footerLocationEl = document.getElementById("footerLocation");
+
+        // Populate country dropdown
+        (function () {
+            var countries = [];
+            for (var c in LOCATIONS) {
+                if (LOCATIONS.hasOwnProperty(c)) countries.push(c);
+            }
+            countries.sort();
+            for (var i = 0; i < countries.length; i++) {
+                var opt = document.createElement("option");
+                opt.value = countries[i];
+                opt.text = countries[i];
+                selCountryEl.appendChild(opt);
+            }
+        })();
+
+        // When country changes, populate city dropdown
+        selCountryEl.onchange = function () {
+            var country = selCountryEl.value;
+            // Clear city options
+            selCityEl.innerHTML = '<option value="">-- Choose City --</option>';
+            if (country && LOCATIONS[country]) {
+                var cities = LOCATIONS[country];
+                for (var i = 0; i < cities.length; i++) {
+                    var opt = document.createElement("option");
+                    opt.value = cities[i];
+                    opt.text = cities[i];
+                    selCityEl.appendChild(opt);
+                }
+                selCityEl.disabled = false;
+            } else {
+                selCityEl.disabled = true;
+            }
+        };
+
+        function showSetup() {
+            setupScreenEl.className = "setup-screen";
+            mainDashboardEl.className = "hidden";
+        }
+
+        function hideSetup() {
+            setupScreenEl.className = "setup-screen hidden";
+            mainDashboardEl.className = "";
+        }
+
+        function updateLocationLabels() {
+            prayerTitleEl.innerHTML = "Prayer Times &mdash; " + savedCity;
+            footerLocationEl.innerHTML = savedCity + ", " + savedCountry;
+        }
+
+        function onSetupContinue() {
+            var country = selCountryEl.value;
+            var city = selCityEl.value;
+            if (!country || !city) {
+                alert("Please select both a country and a city.");
+                return;
+            }
+            savedCountry = country;
+            savedCity = city;
+            try {
+                localStorage.setItem("kdash_country", country);
+                localStorage.setItem("kdash_city", city);
+            } catch (e) { }
+            updateLocationLabels();
+            hideSetup();
+            fetchPrayerTimes();
+        }
+
+        // On page load, check localStorage
+        (function () {
+            var c = "";
+            var ci = "";
+            try {
+                c = localStorage.getItem("kdash_country") || "";
+                ci = localStorage.getItem("kdash_city") || "";
+            } catch (e) { }
+
+            if (c && ci) {
+                savedCountry = c;
+                savedCity = ci;
+                updateLocationLabels();
+                hideSetup();
+                fetchPrayerTimes();
+            } else {
+                showSetup();
+            }
+        })();
+
+        /* =============================================
+           1. DIGITAL CLOCK
+           ============================================= */
+        var clockTimeEl = document.getElementById("clockTime");
+        var clockDateEl = document.getElementById("clockDate");
+
+        var dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+        var monthNames = ["January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December"];
+
+        function pad(n) {
+            return n < 10 ? "0" + n : "" + n;
+        }
+
+        function updateClock() {
+            var now = new Date();
+            var h = now.getHours();
+            var m = now.getMinutes();
+            var ampm = h >= 12 ? "PM" : "AM";
+            var h12 = h % 12;
+            if (h12 === 0) h12 = 12;
+
+            clockTimeEl.innerHTML = pad(h12) + ":" + pad(m) + " " + ampm;
+            clockDateEl.innerHTML = dayNames[now.getDay()] + ", " +
+                monthNames[now.getMonth()] + " " + now.getDate() + ", " + now.getFullYear();
+        }
+
+        updateClock();
+        setInterval(updateClock, 1000);
+
+        /* =============================================
+           2. POMODORO TIMER
+           ============================================= */
+        var WORK_DURATION = 25 * 60;
+        var BREAK_DURATION = 5 * 60;
+        var LONG_BREAK_DURATION = 15 * 60;
+
+        var pomoTimeLeft = WORK_DURATION;
+        var pomoRunning = false;
+        var pomoInterval = null;
+        var pomoIsWork = true;
+        var pomoSessions = 0;
+
+        var pomoDisplayEl = document.getElementById("pomoDisplay");
+        var pomoStatusEl = document.getElementById("pomoStatus");
+        var pomoSessionsEl = document.getElementById("pomoSessions");
+
+        function formatTime(totalSeconds) {
+            var m = Math.floor(totalSeconds / 60);
+            var s = totalSeconds % 60;
+            return pad(m) + ":" + pad(s);
+        }
+
+        function updatePomoDisplay() {
+            pomoDisplayEl.innerHTML = formatTime(pomoTimeLeft);
+            pomoStatusEl.innerHTML = pomoIsWork ? "WORK" : "BREAK";
+            pomoSessionsEl.innerHTML = "Sessions completed: " + pomoSessions;
+        }
+
+        function pomoTick() {
+            if (pomoTimeLeft <= 0) {
+                clearInterval(pomoInterval);
+                pomoInterval = null;
+                pomoRunning = false;
+
+                if (pomoIsWork) {
+                    pomoSessions++;
+                    pomoIsWork = false;
+                    if (pomoSessions % 4 === 0) {
+                        pomoTimeLeft = LONG_BREAK_DURATION;
+                    } else {
+                        pomoTimeLeft = BREAK_DURATION;
+                    }
+                } else {
+                    pomoIsWork = true;
+                    pomoTimeLeft = WORK_DURATION;
+                }
+
+                updatePomoDisplay();
+                try { alert((pomoIsWork ? "Break over! Time to work." : "Work done! Take a break.")); } catch (e) { }
+                return;
+            }
+            pomoTimeLeft--;
+            updatePomoDisplay();
+        }
+
+        function pomoStart() {
+            if (pomoRunning) return;
+            pomoRunning = true;
+            pomoInterval = setInterval(pomoTick, 1000);
+        }
+
+        function pomoPause() {
+            if (!pomoRunning) return;
+            pomoRunning = false;
+            if (pomoInterval) {
+                clearInterval(pomoInterval);
+                pomoInterval = null;
+            }
+        }
+
+        function pomoReset() {
+            pomoPause();
+            pomoIsWork = true;
+            pomoTimeLeft = WORK_DURATION;
+            updatePomoDisplay();
+        }
+
+        updatePomoDisplay();
+
+        /* =============================================
+           3. PRAYER TIMES (Aladhan API — by City)
+           ============================================= */
+        var prayerContentEl = document.getElementById("prayerContent");
+        var prayerMetaEl = document.getElementById("prayerMeta");
+
+        var prayerKeys = [
+            { key: "Fajr", label: "Fajr" },
+            { key: "Sunrise", label: "Sunrise" },
+            { key: "Dhuhr", label: "Dhuhr" },
+            { key: "Asr", label: "Asr" },
+            { key: "Maghrib", label: "Maghrib" },
+            { key: "Isha", label: "Isha" }
+        ];
+
+        function timeToMinutes(timeStr) {
+            var clean = timeStr.replace(/\s*\(.*\)/, "");
+            var parts = clean.split(":");
+            return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+        }
+
+        function findNextPrayer(timings) {
+            var now = new Date();
+            var nowMinutes = now.getHours() * 60 + now.getMinutes();
+
+            for (var i = 0; i < prayerKeys.length; i++) {
+                var t = timings[prayerKeys[i].key];
+                if (t && timeToMinutes(t) > nowMinutes) {
+                    return prayerKeys[i].key;
+                }
+            }
+            return "Fajr";
+        }
+
+        function cleanTimeStr(str) {
+            return str.replace(/\s*\(.*\)/, "");
+        }
+
+        function renderPrayerTimes(timings, dateStr) {
+            var nextKey = findNextPrayer(timings);
+            var html = '<ul class="prayer-list">';
+
+            for (var i = 0; i < prayerKeys.length; i++) {
+                var pk = prayerKeys[i];
+                var t = timings[pk.key];
+                var isNext = (pk.key === nextKey);
+
+                html += '<li class="prayer-item clearfix' + (isNext ? ' next-prayer' : '') + '">';
+                html += '<span class="prayer-name">' + pk.label + (isNext ? " &#9654;" : "") + '</span>';
+                html += '<span class="prayer-time">' + cleanTimeStr(t) + '</span>';
+                html += '</li>';
+            }
+
+            html += '</ul>';
+            prayerContentEl.innerHTML = html;
+            prayerMetaEl.innerHTML = "Date: " + dateStr + " &bull; " + savedCity + ", " + savedCountry;
+        }
+
+        function fetchPrayerTimes() {
+            if (!savedCity || !savedCountry) return;
+
+            var today = new Date();
+            var dd = pad(today.getDate());
+            var mm = pad(today.getMonth() + 1);
+            var yyyy = today.getFullYear();
+            var dateStr = dd + "-" + mm + "-" + yyyy;
+
+            var url = "https://api.aladhan.com/v1/timingsByCity/" + dateStr +
+                "?city=" + encodeURIComponent(savedCity) +
+                "&country=" + encodeURIComponent(savedCountry) +
+                "&method=5";
+
+            prayerContentEl.innerHTML = '<p class="prayer-error">Loading prayer times...</p>';
+
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", url, true);
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200) {
+                        try {
+                            var data = JSON.parse(xhr.responseText);
+                            if (data && data.data && data.data.timings) {
+                                renderPrayerTimes(data.data.timings, data.data.date.readable);
+                            } else {
+                                prayerContentEl.innerHTML = '<p class="prayer-error">Invalid data received.</p>';
+                            }
+                        } catch (e) {
+                            prayerContentEl.innerHTML = '<p class="prayer-error">Error parsing prayer times.</p>';
+                        }
+                    } else {
+                        prayerContentEl.innerHTML = '<p class="prayer-error">Failed to load prayer times. Check connection.</p>';
+                    }
+                }
+            };
+            xhr.send(null);
+        }
+
+        // Refresh prayer times every 30 minutes
+        setInterval(fetchPrayerTimes, 30 * 60 * 1000);
+    </script>
+
+</body>
+
+</html>
