@@ -656,7 +656,14 @@
         }
 
         function cleanTimeStr(str) {
-            return str.replace(/\s*\(.*\)/, "");
+            var clean = str.replace(/\s*\(.*\)/, "");
+            var parts = clean.split(":");
+            var h = parseInt(parts[0], 10);
+            var m = parts[1];
+            var ampm = h >= 12 ? "PM" : "AM";
+            var h12 = h % 12;
+            if (h12 === 0) h12 = 12;
+            return h12 + ":" + m + " " + ampm;
         }
 
         function renderPrayerTimes(timings, dateStr) {
