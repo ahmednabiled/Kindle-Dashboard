@@ -283,6 +283,37 @@
                     </select>
                 </div>
 
+                <div class="setup-field">
+                    <label class="setup-label" for="selOffset">Clock Correction</label>
+                    <select class="setup-select" id="selOffset">
+                        <option value="-12">-12 Hours</option>
+                        <option value="-11">-11 Hours</option>
+                        <option value="-10">-10 Hours</option>
+                        <option value="-9">-9 Hours</option>
+                        <option value="-8">-8 Hours</option>
+                        <option value="-7">-7 Hours</option>
+                        <option value="-6">-6 Hours</option>
+                        <option value="-5">-5 Hours</option>
+                        <option value="-4">-4 Hours</option>
+                        <option value="-3">-3 Hours</option>
+                        <option value="-2">-2 Hours</option>
+                        <option value="-1">-1 Hour</option>
+                        <option value="0" selected>No Change (0)</option>
+                        <option value="1">+1 Hour</option>
+                        <option value="2">+2 Hours</option>
+                        <option value="3">+3 Hours</option>
+                        <option value="4">+4 Hours</option>
+                        <option value="5">+5 Hours</option>
+                        <option value="6">+6 Hours</option>
+                        <option value="7">+7 Hours</option>
+                        <option value="8">+8 Hours</option>
+                        <option value="9">+9 Hours</option>
+                        <option value="10">+10 Hours</option>
+                        <option value="11">+11 Hours</option>
+                        <option value="12">+12 Hours</option>
+                    </select>
+                </div>
+
                 <button class="setup-btn" id="btnContinue" onclick="onSetupContinue()">Continue</button>
             </div>
         </div>
@@ -370,11 +401,13 @@
 
         var savedCity = "";
         var savedCountry = "";
+        var savedOffset = 0;
 
         var setupScreenEl = document.getElementById("setupScreen");
         var mainDashboardEl = document.getElementById("mainDashboard");
         var selCountryEl = document.getElementById("selCountry");
         var selCityEl = document.getElementById("selCity");
+        var selOffsetEl = document.getElementById("selOffset");
         var prayerTitleEl = document.getElementById("prayerTitle");
         var footerLocationEl = document.getElementById("footerLocation");
 
@@ -430,15 +463,18 @@
         function onSetupContinue() {
             var country = selCountryEl.value;
             var city = selCityEl.value;
+            var offset = selOffsetEl.value;
             if (!country || !city) {
                 alert("Please select both a country and a city.");
                 return;
             }
             savedCountry = country;
             savedCity = city;
+            savedOffset = parseInt(offset, 10) || 0;
             try {
                 localStorage.setItem("kdash_country", country);
                 localStorage.setItem("kdash_city", city);
+                localStorage.setItem("kdash_offset", savedOffset);
             } catch (e) { }
             updateLocationLabels();
             hideSetup();
@@ -449,14 +485,18 @@
         (function () {
             var c = "";
             var ci = "";
+            var off = "0";
             try {
                 c = localStorage.getItem("kdash_country") || "";
                 ci = localStorage.getItem("kdash_city") || "";
+                off = localStorage.getItem("kdash_offset") || "0";
             } catch (e) { }
 
             if (c && ci) {
                 savedCountry = c;
                 savedCity = ci;
+                savedOffset = parseInt(off, 10) || 0;
+                selOffsetEl.value = savedOffset;
                 updateLocationLabels();
                 hideSetup();
                 fetchPrayerTimes();
@@ -481,6 +521,9 @@
 
         function updateClock() {
             var now = new Date();
+            if (savedOffset !== 0) {
+                now.setTime(now.getTime() + savedOffset * 60 * 60 * 1000);
+            }
             var h = now.getHours();
             var m = now.getMinutes();
             var ampm = h >= 12 ? "PM" : "AM";
