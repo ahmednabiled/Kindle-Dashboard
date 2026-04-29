@@ -236,6 +236,65 @@
             padding: 12px 0;
         }
 
+        /* ===== SPLIT CARD ===== */
+        .card-split {
+            display: flex;
+            border: 3px solid #000;
+            margin-bottom: 18px;
+        }
+
+        .card-half {
+            flex: 1;
+            padding: 16px;
+        }
+
+        .card-half + .card-half {
+            border-left: 2px solid #000;
+        }
+
+        .card-half .card-title {
+            border-bottom: 2px solid #000;
+            padding-bottom: 6px;
+            margin-bottom: 12px;
+        }
+
+        .clock-time-sm {
+            font-size: 38px;
+            font-weight: bold;
+            text-align: center;
+            letter-spacing: 3px;
+            padding: 6px 0 2px;
+            font-family: "Courier New", Courier, monospace;
+        }
+
+        .salat-name {
+            font-size: 13px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-align: center;
+            margin-bottom: 4px;
+            color: #333;
+        }
+
+        .salat-timer {
+            font-size: 38px;
+            font-weight: bold;
+            text-align: center;
+            letter-spacing: 3px;
+            padding: 6px 0 2px;
+            font-family: "Courier New", Courier, monospace;
+        }
+
+        .salat-timer.past {
+            color: #555;
+        }
+
+        @media (max-width: 420px) {
+            .card-split { flex-direction: column; }
+            .card-half + .card-half { border-left: none; border-top: 2px solid #000; }
+        }
+
         /* ===== CLEARFIX ===== */
         .clearfix::after {
             content: "";
@@ -321,13 +380,31 @@
         <!-- ===== MAIN DASHBOARD ===== -->
         <div id="mainDashboard" class="hidden">
 
-            <!-- CLOCK -->
-            <div class="card">
-                <div class="card-title">Clock</div>
-                <div class="clock-time" id="clockTime">--:--:--</div>
-                <div class="clock-date" id="clockDate">---</div>
+            <!-- CLOCK + SALAT SPLIT CARD -->
+            <div class="card-split">
+                <!-- Left: Clock -->
+                <div class="card-half">
+                    <div class="card-title">Clock</div>
+                    <div class="clock-time-sm" id="clockTime">--:--</div>
+                    <div class="clock-date" id="clockDate">---</div>
+                </div>
+                <!-- Right: Salat Remaining Time -->
+                <div class="card-half">
+                    <div class="card-title">Salat</div>
+                    <div class="salat-name" id="salatTimerName">--</div>
+                    <div class="salat-timer" id="salatTimerDisplay">--:--:--</div>
+                </div>
             </div>
 
+            <!-- PRAYER TIMES -->
+            <div class="card">
+                <div class="card-title" id="prayerTitle">Prayer Times</div>
+                <div id="prayerContent">
+                    <p class="prayer-error">Loading prayer times...</p>
+                </div>
+                <div class="prayer-meta" id="prayerMeta"></div>
+            </div>
+            
             <!-- POMODORO -->
             <div class="card">
                 <div class="card-title">Pomodoro Timer</div>
@@ -340,16 +417,7 @@
                 </div>
                 <div class="pomo-sessions" id="pomoSessions">Sessions completed: 0</div>
             </div>
-
-            <!-- PRAYER TIMES -->
-            <div class="card">
-                <div class="card-title" id="prayerTitle">Prayer Times</div>
-                <div id="prayerContent">
-                    <p class="prayer-error">Loading prayer times...</p>
-                </div>
-                <div class="prayer-meta" id="prayerMeta"></div>
-            </div>
-
+            
             <div class="footer" id="footerText">
                 Kindle Dashboard &bull;
                 <span id="footerLocation">---</span>
@@ -417,6 +485,10 @@
         var pomoSessionsEl = document.getElementById("pomoSessions");
         var prayerContentEl = document.getElementById("prayerContent");
         var prayerMetaEl = document.getElementById("prayerMeta");
+        var salatTimerDisplayEl = document.getElementById("salatTimerDisplay");
+        var salatTimerNameEl = document.getElementById("salatTimerName");
+
+        var currentTimings = null;
 
         // Populate country dropdown
         (function () {
@@ -541,8 +613,82 @@
                 monthNames[now.getMonth()] + " " + now.getDate() + ", " + now.getFullYear();
         }
 
+        function updateSalatTimer() {
+            if (!currentTimings) {
+                salatTimerNameEl.innerHTML = "--";
+                salatTimerDisplayEl.innerHTML = "--:--:--";
+                salatTimerDisplayEl.className = "salat-timer";
+                return;
+            }
+
+            var salatKeys = ["Fajr", "Sunrise", "Dhuhr", "Asr", "Maghrib", "Isha"];
+            var now = new Date();
+            if (savedOffset !== 0) {
+                now = new Date(now.getTime() + savedOffset * 60 * 60 * 1000);
+            }
+            var nowSec = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+
+            // Build array of {key, sec} for each prayer
+            var prayers = [];
+            for (var i = 0; i < salatKeys.length; i++) {
+                var raw = currentTimings[salatKeys[i]];
+                if (!raw) continue;
+                var clean = raw.replace(/\s*\(.*\)/, "");
+                var parts = clean.split(":");
+                var sec = parseInt(parts[0], 10) * 3600 + parseInt(parts[1], 10) * 60;
+                prayers.push({ key: salatKeys[i], sec: sec });
+            }
+
+            // Find current prayer (most recent that has passed)
+            var currentPrayer = null;
+            for (var j = prayers.length - 1; j >= 0; j--) {
+                if (nowSec >= prayers[j].sec) {
+                    currentPrayer = prayers[j];
+                    break;
+                }
+            }
+
+            // Edge case: before Fajr (midnight → Fajr), use Isha from "yesterday"
+            var diffSec, isPast;
+            if (currentPrayer === null) {
+                // Before first prayer (Fajr) — Isha was yesterday
+                var isha = null;
+                for (var k = 0; k < prayers.length; k++) {
+                    if (prayers[k].key === "Isha") { isha = prayers[k]; break; }
+                }
+                if (isha) {
+                    // seconds since yesterday's Isha = nowSec + (86400 - isha.sec)
+                    diffSec = nowSec + (86400 - isha.sec);
+                    isPast = true;
+                    salatTimerNameEl.innerHTML = "Isha";
+                } else {
+                    salatTimerDisplayEl.innerHTML = "--:--:--";
+                    return;
+                }
+            } else {
+                diffSec = nowSec - currentPrayer.sec;
+                isPast = diffSec >= 0;
+                salatTimerNameEl.innerHTML = currentPrayer.key;
+            }
+
+            var absDiff = Math.abs(diffSec);
+            var hh = Math.floor(absDiff / 3600);
+            var mm = Math.floor((absDiff % 3600) / 60);
+            var ss = absDiff % 60;
+            var display = pad(hh) + ":" + pad(mm) + ":" + pad(ss);
+
+            if (isPast) {
+                salatTimerDisplayEl.innerHTML = "-" + display;
+                salatTimerDisplayEl.className = "salat-timer past";
+            } else {
+                salatTimerDisplayEl.innerHTML = display;
+                salatTimerDisplayEl.className = "salat-timer";
+            }
+        }
+
         updateClock();
-        setInterval(updateClock, 1000);
+        updateSalatTimer();
+        setInterval(function() { updateClock(); updateSalatTimer(); }, 1000);
 
         /* =============================================
            2. POMODORO TIMER
@@ -710,6 +856,7 @@
                         try {
                             var data = JSON.parse(xhr.responseText);
                             if (data && data.data && data.data.timings) {
+                                currentTimings = data.data.timings;
                                 renderPrayerTimes(data.data.timings, data.data.date.readable);
                             } else {
                                 prayerContentEl.innerHTML = '<p class="prayer-error">Invalid data received.</p>';
