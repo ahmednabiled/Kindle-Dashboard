@@ -490,6 +490,17 @@
 
         var currentTimings = null;
 
+        // Minutes after Azan before jumping to next prayer countdown
+        var IQAMA_LIMITS = {
+            Fajr:    20,
+            Sunrise: 45,
+            Dhuhr:   15,
+            Asr:     15,
+            Maghrib:  8,
+            Isha:    15
+        };
+        var IQAMA_DEFAULT = 45;
+
         // Populate country dropdown
         (function () {
             var countries = [];
@@ -639,36 +650,63 @@
                 prayers.push({ key: salatKeys[i], sec: sec });
             }
 
-            // Find current prayer (most recent that has passed)
-            var currentPrayer = null;
+            // Find which prayer index is "current" (most recent that has passed)
+            var currentIdx = -1;
             for (var j = prayers.length - 1; j >= 0; j--) {
                 if (nowSec >= prayers[j].sec) {
-                    currentPrayer = prayers[j];
+                    currentIdx = j;
                     break;
                 }
             }
 
-            // Edge case: before Fajr (midnight → Fajr), use Isha from "yesterday"
-            var diffSec, isPast;
-            if (currentPrayer === null) {
-                // Before first prayer (Fajr) — Isha was yesterday
-                var isha = null;
+            var diffSec, isPast, label;
+
+            if (currentIdx === -1) {
+                // Before Fajr — treat Isha from yesterday as current
+                var ishaIdx = -1;
                 for (var k = 0; k < prayers.length; k++) {
-                    if (prayers[k].key === "Isha") { isha = prayers[k]; break; }
+                    if (prayers[k].key === "Isha") { ishaIdx = k; break; }
                 }
-                if (isha) {
-                    // seconds since yesterday's Isha = nowSec + (86400 - isha.sec)
-                    diffSec = nowSec + (86400 - isha.sec);
+                if (ishaIdx === -1) { salatTimerDisplayEl.innerHTML = "--:--:--"; return; }
+
+                var secSinceIsha = nowSec + (86400 - prayers[ishaIdx].sec);
+                var ishaLimit = (IQAMA_LIMITS["Isha"] || IQAMA_DEFAULT) * 60;
+
+                if (secSinceIsha < ishaLimit) {
+                    // Still within Isha iqama window → show negative
+                    label = "Isha";
+                    diffSec = secSinceIsha;
                     isPast = true;
-                    salatTimerNameEl.innerHTML = "Isha";
                 } else {
-                    salatTimerDisplayEl.innerHTML = "--:--:--";
-                    return;
+                    // Past Isha window → count down to Fajr (first prayer)
+                    label = "Fajr";
+                    diffSec = prayers[0].sec - nowSec;
+                    isPast = false;
                 }
             } else {
-                diffSec = nowSec - currentPrayer.sec;
-                isPast = diffSec >= 0;
-                salatTimerNameEl.innerHTML = currentPrayer.key;
+                var cp = prayers[currentIdx];
+                var limitSec = (IQAMA_LIMITS[cp.key] || IQAMA_DEFAULT) * 60;
+                var secSince = nowSec - cp.sec;
+
+                if (secSince < limitSec) {
+                    // Within iqama window → show negative (time since Azan)
+                    label = cp.key;
+                    diffSec = secSince;
+                    isPast = true;
+                } else {
+                    // Past iqama window → count UP to next prayer
+                    var nextIdx = currentIdx + 1;
+                    if (nextIdx >= prayers.length) {
+                        // Past Isha window — wrap to tomorrow's Fajr
+                        label = "Fajr";
+                        diffSec = (86400 - nowSec) + prayers[0].sec;
+                        isPast = false;
+                    } else {
+                        label = prayers[nextIdx].key;
+                        diffSec = prayers[nextIdx].sec - nowSec;
+                        isPast = false;
+                    }
+                }
             }
 
             var absDiff = Math.abs(diffSec);
@@ -677,6 +715,7 @@
             var ss = absDiff % 60;
             var display = pad(hh) + ":" + pad(mm) + ":" + pad(ss);
 
+            salatTimerNameEl.innerHTML = label;
             if (isPast) {
                 salatTimerDisplayEl.innerHTML = "-" + display;
                 salatTimerDisplayEl.className = "salat-timer past";
