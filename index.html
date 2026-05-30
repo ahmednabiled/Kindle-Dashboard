@@ -236,6 +236,65 @@
             padding: 12px 0;
         }
 
+        /* ===== SPLIT CARD ===== */
+        .card-split {
+            display: flex;
+            border: 3px solid #000;
+            margin-bottom: 18px;
+        }
+
+        .card-half {
+            flex: 1;
+            padding: 16px;
+        }
+
+        .card-half + .card-half {
+            border-left: 2px solid #000;
+        }
+
+        .card-half .card-title {
+            border-bottom: 2px solid #000;
+            padding-bottom: 6px;
+            margin-bottom: 12px;
+        }
+
+        .clock-time-sm {
+            font-size: 38px;
+            font-weight: bold;
+            text-align: center;
+            letter-spacing: 3px;
+            padding: 6px 0 2px;
+            font-family: "Courier New", Courier, monospace;
+        }
+
+        .salat-name {
+            font-size: 13px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-align: center;
+            margin-bottom: 4px;
+            color: #333;
+        }
+
+        .salat-timer {
+            font-size: 38px;
+            font-weight: bold;
+            text-align: center;
+            letter-spacing: 3px;
+            padding: 6px 0 2px;
+            font-family: "Courier New", Courier, monospace;
+        }
+
+        .salat-timer.past {
+            color: #555;
+        }
+
+        @media (max-width: 420px) {
+            .card-split { flex-direction: column; }
+            .card-half + .card-half { border-left: none; border-top: 2px solid #000; }
+        }
+
         /* ===== CLEARFIX ===== */
         .clearfix::after {
             content: "";
@@ -321,11 +380,20 @@
         <!-- ===== MAIN DASHBOARD ===== -->
         <div id="mainDashboard" class="hidden">
 
-            <!-- CLOCK -->
-            <div class="card">
-                <div class="card-title">Clock</div>
-                <div class="clock-time" id="clockTime">--:--:--</div>
-                <div class="clock-date" id="clockDate">---</div>
+            <!-- CLOCK + SALAT SPLIT CARD -->
+            <div class="card-split">
+                <!-- Left: Clock -->
+                <div class="card-half">
+                    <div class="card-title">Clock</div>
+                    <div class="clock-time-sm" id="clockTime">--:--</div>
+                    <div class="clock-date" id="clockDate">---</div>
+                </div>
+                <!-- Right: Salat Remaining Time -->
+                <div class="card-half">
+                    <div class="card-title">Salat</div>
+                    <div class="salat-name" id="salatTimerName">--</div>
+                    <div class="salat-timer" id="salatTimerDisplay">--:--:--</div>
+                </div>
             </div>
 
             <!-- POMODORO -->
@@ -349,7 +417,7 @@
                 </div>
                 <div class="prayer-meta" id="prayerMeta"></div>
             </div>
-
+            
             <div class="footer" id="footerText">
                 Kindle Dashboard &bull;
                 <span id="footerLocation">---</span>
@@ -417,6 +485,21 @@
         var pomoSessionsEl = document.getElementById("pomoSessions");
         var prayerContentEl = document.getElementById("prayerContent");
         var prayerMetaEl = document.getElementById("prayerMeta");
+        var salatTimerDisplayEl = document.getElementById("salatTimerDisplay");
+        var salatTimerNameEl = document.getElementById("salatTimerName");
+
+        var currentTimings = null;
+
+        // Minutes after Azan before jumping to next prayer countdown
+        var IQAMA_LIMITS = {
+            Fajr:    20,
+            Sunrise: 45,
+            Dhuhr:   15,
+            Asr:     15,
+            Maghrib:  8,
+            Isha:    15
+        };
+        var IQAMA_DEFAULT = 45;
 
         // Populate country dropdown
         (function () {
@@ -541,8 +624,110 @@
                 monthNames[now.getMonth()] + " " + now.getDate() + ", " + now.getFullYear();
         }
 
+        function updateSalatTimer() {
+            if (!currentTimings) {
+                salatTimerNameEl.innerHTML = "--";
+                salatTimerDisplayEl.innerHTML = "--:--:--";
+                salatTimerDisplayEl.className = "salat-timer";
+                return;
+            }
+
+            var salatKeys = ["Fajr", "Sunrise", "Dhuhr", "Asr", "Maghrib", "Isha"];
+            var now = new Date();
+            if (savedOffset !== 0) {
+                now = new Date(now.getTime() + savedOffset * 60 * 60 * 1000);
+            }
+            var nowSec = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+
+            // Build array of {key, sec} for each prayer
+            var prayers = [];
+            for (var i = 0; i < salatKeys.length; i++) {
+                var raw = currentTimings[salatKeys[i]];
+                if (!raw) continue;
+                var clean = raw.replace(/\s*\(.*\)/, "");
+                var parts = clean.split(":");
+                var sec = parseInt(parts[0], 10) * 3600 + parseInt(parts[1], 10) * 60;
+                prayers.push({ key: salatKeys[i], sec: sec });
+            }
+
+            // Find which prayer index is "current" (most recent that has passed)
+            var currentIdx = -1;
+            for (var j = prayers.length - 1; j >= 0; j--) {
+                if (nowSec >= prayers[j].sec) {
+                    currentIdx = j;
+                    break;
+                }
+            }
+
+            var diffSec, isPast, label;
+
+            if (currentIdx === -1) {
+                // Before Fajr — treat Isha from yesterday as current
+                var ishaIdx = -1;
+                for (var k = 0; k < prayers.length; k++) {
+                    if (prayers[k].key === "Isha") { ishaIdx = k; break; }
+                }
+                if (ishaIdx === -1) { salatTimerDisplayEl.innerHTML = "--:--:--"; return; }
+
+                var secSinceIsha = nowSec + (86400 - prayers[ishaIdx].sec);
+                var ishaLimit = (IQAMA_LIMITS["Isha"] || IQAMA_DEFAULT) * 60;
+
+                if (secSinceIsha < ishaLimit) {
+                    // Still within Isha iqama window → show negative
+                    label = "Isha";
+                    diffSec = secSinceIsha;
+                    isPast = true;
+                } else {
+                    // Past Isha window → count down to Fajr (first prayer)
+                    label = "Fajr";
+                    diffSec = prayers[0].sec - nowSec;
+                    isPast = false;
+                }
+            } else {
+                var cp = prayers[currentIdx];
+                var limitSec = (IQAMA_LIMITS[cp.key] || IQAMA_DEFAULT) * 60;
+                var secSince = nowSec - cp.sec;
+
+                if (secSince < limitSec) {
+                    // Within iqama window → show negative (time since Azan)
+                    label = cp.key;
+                    diffSec = secSince;
+                    isPast = true;
+                } else {
+                    // Past iqama window → count UP to next prayer
+                    var nextIdx = currentIdx + 1;
+                    if (nextIdx >= prayers.length) {
+                        // Past Isha window — wrap to tomorrow's Fajr
+                        label = "Fajr";
+                        diffSec = (86400 - nowSec) + prayers[0].sec;
+                        isPast = false;
+                    } else {
+                        label = prayers[nextIdx].key;
+                        diffSec = prayers[nextIdx].sec - nowSec;
+                        isPast = false;
+                    }
+                }
+            }
+
+            var absDiff = Math.abs(diffSec);
+            var hh = Math.floor(absDiff / 3600);
+            var mm = Math.floor((absDiff % 3600) / 60);
+            var ss = absDiff % 60;
+            var display = pad(hh) + ":" + pad(mm) + ":" + pad(ss);
+
+            salatTimerNameEl.innerHTML = label;
+            if (isPast) {
+                salatTimerDisplayEl.innerHTML = display;
+                salatTimerDisplayEl.className = "salat-timer past";
+            } else {
+                salatTimerDisplayEl.innerHTML = "-" + display;
+                salatTimerDisplayEl.className = "salat-timer";
+            }
+        }
+
         updateClock();
-        setInterval(updateClock, 1000);
+        updateSalatTimer();
+        setInterval(function() { updateClock(); updateSalatTimer(); }, 1000);
 
         /* =============================================
            2. POMODORO TIMER
@@ -710,6 +895,7 @@
                         try {
                             var data = JSON.parse(xhr.responseText);
                             if (data && data.data && data.data.timings) {
+                                currentTimings = data.data.timings;
                                 renderPrayerTimes(data.data.timings, data.data.date.readable);
                             } else {
                                 prayerContentEl.innerHTML = '<p class="prayer-error">Invalid data received.</p>';
